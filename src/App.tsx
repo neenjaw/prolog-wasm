@@ -3,6 +3,7 @@ import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import Worker from "./worker?worker";
 import "./App.css";
+import { Button } from "@/components/ui/button";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -54,10 +55,10 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
+        <Button onClick={() => setCount((count) => count + 1)}>
           count is {count}
-        </button>
-        <button onClick={callForProofOfLife}>Call for proof of life</button>
+        </Button>
+        <Button onClick={callForProofOfLife}>Call for proof of life</Button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
