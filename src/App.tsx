@@ -1,10 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import Worker from "./worker?worker";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+  const swiplWorkerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    swiplWorkerRef.current = new Worker();
+
+    swiplWorkerRef.current.onmessage = (event) => {
+      const { data } = event;
+      if (data.type === "heartbeat") {
+        console.log("Worker heartbeat:", data.message);
+      } else {
+        console.error("Unhandled message type:", data.type);
+      }
+    };
+
+    swiplWorkerRef.current.onerror = (error) => {
+      console.error("Main thread: Worker error:", error);
+    };
+
+    return () => {
+      if (swiplWorkerRef.current) {
+        swiplWorkerRef.current.terminate();
+        swiplWorkerRef.current = null;
+      }
+    };
+  }, []);
+
+  const callForProofOfLife = () => {
+    if (swiplWorkerRef.current) {
+      swiplWorkerRef.current.postMessage({
+        type: "heartbeat",
+      });
+    } else {
+      console.error("Worker is not initialized");
+    }
+  };
 
   return (
     <>
@@ -21,6 +57,7 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
+        <button onClick={callForProofOfLife}>Call for proof of life</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -29,7 +66,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
