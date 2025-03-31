@@ -1,45 +1,48 @@
-import SWIPL from "swipl-wasm";
 import { Temporal } from "temporal-polyfill";
-
-type WorkerEvent = {
-  data: {
-    type: string;
-  };
-};
-
-function assertIsWorkerEvent(event: unknown): asserts event is WorkerEvent {
-  if (typeof event !== "object" || event === null) {
-    throw new Error("Event is not an object");
-  }
-  if (!("data" in event)) {
-    throw new Error("Event does not have a data property");
-  }
-  if (typeof (event as WorkerEvent).data !== "object") {
-    throw new Error("Event data is not an object");
-  }
-  if (!("type" in (event as WorkerEvent).data)) {
-    throw new Error("Event data does not have a type property");
-  }
-  if (typeof (event as WorkerEvent).data.type !== "string") {
-    throw new Error("Event data type is not a string");
-  }
-}
+import { assertIsWorkerEvent, assertIsWorkerPrologEvent } from "@/lib/event";
+import { initProlog, evalProlog } from "./worker/prolog";
 
 function heartbeat() {
   return `${Temporal.Now.instant().toString()} - Worker is alive`;
 }
 
-self.onmessage = function (event: any) {
+self.onmessage = function (event: unknown) {
   assertIsWorkerEvent(event);
 
-  const { data } = event;
-  if (data.type === "heartbeat") {
+  if (event.data.type === "heartbeat") {
     self.postMessage({
       type: "heartbeat",
       message: heartbeat(),
     });
+    return;
+  } else if (event.data.type === "prolog") {
+    assertIsWorkerPrologEvent(event);
+
+    const { solution, test } = event.data.payload;
+    initProlog({ arguments: [] }) // ["-q"] })
+      .then(() => evalProlog(solution, test))
+      .then((result) => {
+        self.postMessage({
+          type: "prolog",
+          success: true,
+          payload: {
+            result,
+          },
+        });
+      })
+      .catch((error: Error) => {
+        self.postMessage({
+          type: "prolog",
+          success: false,
+          payload: {
+            error: error.message,
+          },
+        });
+      });
+    return;
   } else {
-    self.reportError(new Error("Unhandled message type: " + data.type));
+    console.log({ event });
+    // self.reportError(new Error("Unhandled message type: " + event.data.type));
   }
 };
 
